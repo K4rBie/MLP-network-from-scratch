@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+
 Matrix::Matrix(int rows, int cols): m_rows(rows), m_cols(cols) {
     //pointer to pointer, to the element at row 1, column 1
     m_array = new float*[rows];

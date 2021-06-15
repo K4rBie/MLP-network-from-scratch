@@ -3,67 +3,68 @@
 
 #include <vector>
 #include "matrix.h"
+#include <memory>
+#include <cmath>
 
 class Layer 
 {
 public:
     Layer();
-    ~Layer();
-    virtual std::vector<float> Output() = 0;
-    int Size();
-    virtual Matrix Sensitivity() = 0;
+    ~Layer(){};
+    virtual Matrix& Output(const Matrix&) = 0;
+    void SetNextLayer(std::shared_ptr<Layer> next_layer);
+    int Nodes();
+    static float Sigmoid(float x);
+    static Matrix& Sigmoid(const Matrix& x);
 
 protected:
-    Layer* m_prev_layer; //sharedptr
-    Layer* m_next_layer;
-    int m_size;
+    std::weak_ptr<Layer> m_prev_layer;
+    std::shared_ptr<Layer> m_next_layer = nullptr;
+    int m_nodes = 0;
+    int m_inputs = 0;
+
+
+};
+
+class FlattenLayer: public Layer
+{
+public:
+    FlattenLayer(int width, int height, std::shared_ptr<Layer> t_prev_layer);
+    Matrix& Output(const Matrix &input);
+
+
+private:
+    int m_neurons_count;
+    int m_width;
+    int m_height;
+
+
+};
+
+class DenseLayer: public Layer
+{
+public:
+    DenseLayer(int size, std::shared_ptr<Layer> prev_layer);
+    Matrix& Output(const Matrix &input);
+    Matrix Sensitivity();
+
+private:
     Matrix m_weights;
     Matrix m_sensitivity;
-
-};
-
-class InputLayer: Layer 
-{
-public:
-    InputLayer(float size);
-    std::vector<float> Output();
-
-private:
-    
-
-};
-
-class DenseLayer: Layer 
-{
-public:
-    DenseLayer(float size);
-    std::vector<float> Output();
-
-private:
-
 };
 
 
-
-class FlattenLayer: Layer 
+class OutputLayer: public Layer
 {
 public:
-    FlattenLayer(float size, Layer* t_prev_layer);
-    std::vector<float> Output();
+    OutputLayer(int size, std::shared_ptr<Layer> prev_layer);
+    Matrix& Output(const Matrix &input);
+    Matrix Sensitivity();
 
 private:
-    
-
-};
-
-class OutputLayer: Layer 
-{
-public:
-    OutputLayer(float size);
-    std::vector<float> Output();
-
-private:
-    
+    Matrix m_weights;
+    Matrix m_sensitivity;
+    int m_neurons_count;
 
 };
 

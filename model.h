@@ -12,10 +12,11 @@ class Model
 public:
     Model(int input_width, int input_height, int number_of_classes, std::vector<int> dense_layers_sizes);
     void Train();
-    int Infer();
+    int Infer(float** image);
 
 private:
-    std::list<Layer> m_layers; //pointers?
+    std::shared_ptr<Layer> m_input_layer = nullptr;
+    std::shared_ptr<Layer> m_output_layer = nullptr;
 
 };
 

@@ -1,18 +1,24 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
+#include "CImg.h"
+
+using cimg_library::CImg;
+
 class Matrix 
 {
 public:
     Matrix(int rows, int cols);
     Matrix(float** array);
     Matrix(float **array, int rows, int cols);
+    Matrix(const CImg<float>& image);
     Matrix(){};
     ~Matrix();
-    void Print();
-    Matrix operator*(const Matrix& a);
-    Matrix operator+(const Matrix& a);
-    Matrix operator-(const Matrix& a);
+    Matrix(const Matrix& a);
+
+    Matrix& operator*(const Matrix& a);
+    Matrix& operator+(const Matrix& a);
+    Matrix& operator-(const Matrix& a) const;
     Matrix& operator=(const Matrix& a);
     const float Get(int row, int col) const;
     static Matrix &MultiplyElementwise(const Matrix& a, const Matrix& b);
@@ -22,13 +28,16 @@ public:
     void Fill(int fill);
     void FillRandom(int min, int max);
     void Set(int row, int col, float value);
-
-    int Rows();
-    int Columns();
-
     float &At(int row, int col) const;
+
+    int Rows() const;
+    int Columns() const;
+
+    void print()const ;
+
+
 private:
-    float** m_array;
+    float** m_array = nullptr;
     int m_rows{};
     int m_cols{};
 

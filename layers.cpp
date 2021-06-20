@@ -8,34 +8,64 @@ Layer::Layer()
 
 }
 
-void Layer::SetNextLayer(std::shared_ptr<Layer> next_layer)
+void Layer::setNextLayer(std::shared_ptr<Layer> next_layer)
 {
     m_next_layer = next_layer;
 }
 
-int Layer::Nodes()
+int Layer::nodes()
 {
     return m_nodes;
 }
 
-Matrix &Layer::Sigmoid(const Matrix &x)
+Matrix Layer::getLinOutput()
+{
+    return m_lin_output;
+}
+
+Matrix &Layer::sigmoid(const Matrix &x)
 {
     auto* ret = new Matrix(x);
 
     for(int i = 0; i < ret->Rows(); i++) {
         for(int j = 0; j < ret->Columns(); j++) {
             //ret->Set(i, j, Sigmoid(ret->Get(i, j)));
-            ret->At(i, j) = Sigmoid(ret->At(i, j));
+            ret->At(i, j) = sigmoid(ret->At(i, j));
         }
     }
 
     return *ret;
 }
 
-float Layer::Sigmoid(float x)
+Matrix &Layer::sigmoidDeriv(const Matrix &x)
+{
+    auto* ret = new Matrix(x);
+
+    for(int i = 0; i < ret->Rows(); i++) {
+        for(int j = 0; j < ret->Columns(); j++) {
+            //ret->Set(i, j, Sigmoid(ret->Get(i, j)));
+            ret->At(i, j) = sigmoidDeriv(ret->At(i, j));
+        }
+    }
+
+    return *ret;
+}
+
+float Layer::sigmoid(float x)
 {
     return 1/(1 + exp(-x));
 }
+
+float Layer::sigmoidDeriv(float x)
+{
+    float z = sigmoid(x);
+    return z*(1-z);
+}
+
+
+
+
+
 
 //
 // FlattenLayer
@@ -43,6 +73,10 @@ float Layer::Sigmoid(float x)
 FlattenLayer::FlattenLayer(int width, int height, std::shared_ptr<Layer> t_prev_layer): m_width(width), m_height(height)
 {
     m_nodes = width*height;
+
+    m_lin_output = Matrix(nodes(), 1);
+    m_lin_output.Fill(0);
+
 }
 
 ///
@@ -50,24 +84,51 @@ FlattenLayer::FlattenLayer(int width, int height, std::shared_ptr<Layer> t_prev_
 /// \param input
 /// \return an output from the end of the model
 ///
-Matrix& FlattenLayer::Output(const Matrix& input)
+Matrix FlattenLayer::output(const Matrix& input)
 {
-    auto* Z = new Matrix(Nodes(), 1);
+    Matrix Z(nodes(), 1);
 
     for(int i = 0; i < m_height; i++) {
         for(int j = 0; j < m_width; j++) {
             //Z->Set(i*m_width+j, 1, input.Get(i, j));
-            Z->At(i*m_width+j, 1) = input.At(i, j);
+            Z.At(i*m_width+j, 0) = input.At(i, j);
+            m_lin_output.At(i*m_width+j, 0) = input.At(i, j);
         }
     }
-    //return *Z;
+
+    // go to next layer or return output
     if (m_next_layer != nullptr) {
-        return m_next_layer->Output(*Z);
+        return m_next_layer->output(Z);
     } else {
-        return *Z;
+        return Z;
     }
+}
+
+void FlattenLayer::backPropagation(const Matrix &next_weights, const Matrix &next_sensitivity, float learning_rate)
+{
+    return;
+}
+
+///
+/// \brief FlattenLayer::computeSensitivity
+/// \param next_weights
+/// \param next_sensitivity
+/// \return zawsze NULL ale to tylko przy założeniu, że nie ma przed nim żadnej głębokiej warstwy.
+///
+Matrix FlattenLayer::computeSensitivity(const Matrix &next_weights, const Matrix &next_sensitivity)
+{
+    // tylko przy założeniu że to krańcowa warstwa
+    m_sensitivity.Fill(0);
+    return m_sensitivity;
+}
+
+void FlattenLayer::updateWeights(Matrix in, float learning_rate)
+{
 
 }
+
+
+
 
 
 //
@@ -77,62 +138,176 @@ DenseLayer::DenseLayer(int size, std::shared_ptr<Layer> prev_layer)
 {
     m_prev_layer = prev_layer;
     m_nodes = size;
-    m_inputs = prev_layer->Nodes();
+    m_inputs = prev_layer->nodes();
 
-    m_weights = Matrix(m_inputs, Nodes());
+    m_weights = Matrix(m_inputs, nodes());
     m_weights.FillRandom(-1,1);
 
-    m_sensitivity = Matrix(m_inputs, Nodes());
+    m_sensitivity = Matrix(nodes(), 1);
     m_sensitivity.Fill(0);
+
+    m_lin_output = Matrix(nodes(), 1);
+    m_lin_output.Fill(0);
 }
 
-Matrix& DenseLayer::Output(const Matrix &input)
+Matrix DenseLayer::output(const Matrix &input)
 {
     float sum = 0.0f;
-    auto* z = new Matrix(Nodes(), 1);
+    Matrix z(nodes(), 1);
 
     // go through every node
-    for(int i = 0; i < Nodes(); i++)
+    for(int i = 0; i < nodes(); i++)
     {
         sum = 0.0f;
 
         // sum all (weight x input) value pair
         for(int j = 0; j < m_inputs; j++)
         {
-            sum += m_weights.Get(j,i) * input.Get(j, 1);
+            sum += m_weights.Get(j,i) * input.Get(j, 0);
         }
         //ret->Set(i, 1, sum);
-        z->At(i, 1) = Sigmoid(sum);
+        z.At(i, 0) = sigmoid(sum);
+        m_lin_output.At(i, 0) = sum;
     }
 
     if (m_next_layer != nullptr) {
-        return m_next_layer->Output(*z);
+        return m_next_layer->output(z);
     } else {
-        return *z;
+        return z;
     }
 
 }
 
-Matrix DenseLayer::Sensitivity()
+Matrix DenseLayer::computeSensitivity(const Matrix& next_weights, const Matrix& next_sensitivity)
 {
+    m_sensitivity.Fill(0);
+
+    float sum = 0.0f;
+
+    for (int i = 0; i < m_nodes; i++) {
+        sum = 0.0f;
+        for (int j = 0; j < next_sensitivity.Rows(); j ++) {
+            // i,j bo bieżemy i-tą wagę z każdego node'a następnej warstwy
+            sum += next_weights.At(i,j) * next_sensitivity.At(j, 0);
+        }
+        m_sensitivity.At(i, 0) = sigmoidDeriv(m_lin_output.At(i, 0)) * sum;
+    }
+    //cout << endl << "sensitivity: " << endl;
+    //m_sensitivity.print();
+
+    return m_sensitivity;
+}
+
+void DenseLayer::backPropagation(const Matrix& next_weights, const Matrix& next_sensitivity, float learning_rate)
+{
+    computeSensitivity(next_weights, next_sensitivity);
+
+    // to przed zmianami w wagach, żeby nie wpływały błędnie na poprzednie warstwy.
+    auto prev_layer = m_prev_layer.lock();
+
+    prev_layer->backPropagation(m_weights, m_sensitivity, learning_rate);
+
+    // policz zmianę na wagach
+    updateWeights(prev_layer->getLinOutput(), learning_rate);
 
 }
 
-//
-// OutputLayer
-//
+void DenseLayer::updateWeights(Matrix in, float learning_rate)
+{
+    //cout << "output from previous layer: " << endl;
+    //in.print();
+    for (int i = 0; i < m_nodes; i++)
+    {
+        for (int j = 0; j < m_inputs; j++)
+        {
+            m_weights.At(j, i) -= learning_rate * sigmoid(in.At(j,0))*m_sensitivity.At(i, 0);
+        }
+    }
+}
 
+
+
+
+
+///
+/// \brief OutputLayer::OutputLayer
+/// \param size
+/// \param prev_layer
+///
 OutputLayer::OutputLayer(int size, std::shared_ptr<Layer> prev_layer)
 {
+    m_prev_layer = prev_layer;
+    m_nodes = size;
+    m_inputs = prev_layer->nodes();
 
+    m_weights = Matrix(m_inputs, nodes());
+    m_weights.FillRandom(-1,1);
+
+    m_sensitivity = Matrix(nodes(), 1);
+    m_sensitivity.Fill(0);
+
+    m_lin_output = Matrix(nodes(), 1);
+    m_lin_output.Fill(0);
 }
 
-Matrix &OutputLayer::Output(const Matrix &input)
+Matrix OutputLayer::output(const Matrix &input)
 {
+    float sum = 0.0f;
+    Matrix z(nodes(), 1);
 
+    //m_weights.print();
+    //input.print();
+    // go through every node
+    for(int i = 0; i < nodes(); i++)
+    {
+        sum = 0.0f;
+
+        // sum all (weight x input) value pair
+        for(int j = 0; j < m_inputs; j++)
+        {
+            sum += m_weights.Get(j,i) * input.Get(j, 0);
+        }
+        //ret->Set(i, 1, sum);
+        m_lin_output.At(i, 0) = sum;
+        z.At(i, 0) = sigmoid(sum);
+    }
+
+    if (m_next_layer != nullptr) {
+        return m_next_layer->output(z);
+    } else {
+        return z;
+    }
 }
 
-Matrix OutputLayer::Sensitivity()
+Matrix OutputLayer::computeSensitivity(const Matrix &, const Matrix &classification)
 {
+    // z-s to sensitivity już przy sigmoidzie
 
+    m_sensitivity = sigmoid(m_lin_output) - classification;
+
+    return m_sensitivity;
+}
+
+void OutputLayer::updateWeights(Matrix in, float learning_rate)
+{
+    for (int i = 0; i < m_nodes; i++)
+    {
+        for (int j = 0; j < m_inputs; j++)
+        {
+            m_weights.At(j, i) -= sigmoid(in.At(j,0))*m_sensitivity.At(i, 0);
+        }
+    }
+}
+
+void OutputLayer::backPropagation(const Matrix &next_weights, const Matrix &next_sensitivity, float learning_rate) //????????????????????????????
+{
+    computeSensitivity(next_weights, next_sensitivity);
+
+    // to przed zmianami w wagach, żeby nie wpływały błędnie na poprzednie warstwy.
+    auto prev_layer = m_prev_layer.lock();
+
+    prev_layer->backPropagation(m_weights, m_sensitivity, learning_rate);
+
+    // policz zmianę na wagach
+    updateWeights(prev_layer->getLinOutput(), learning_rate);
 }

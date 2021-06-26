@@ -27,10 +27,10 @@ Matrix &Layer::sigmoid(const Matrix &x)
 {
     auto* ret = new Matrix(x);
 
-    for(int i = 0; i < ret->Rows(); i++) {
-        for(int j = 0; j < ret->Columns(); j++) {
+    for(int i = 0; i < ret->rows(); i++) {
+        for(int j = 0; j < ret->columns(); j++) {
             //ret->Set(i, j, Sigmoid(ret->Get(i, j)));
-            ret->At(i, j) = sigmoid(ret->At(i, j));
+            ret->at(i, j) = sigmoid(ret->at(i, j));
         }
     }
 
@@ -41,10 +41,10 @@ Matrix &Layer::sigmoidDeriv(const Matrix &x)
 {
     auto* ret = new Matrix(x);
 
-    for(int i = 0; i < ret->Rows(); i++) {
-        for(int j = 0; j < ret->Columns(); j++) {
+    for(int i = 0; i < ret->rows(); i++) {
+        for(int j = 0; j < ret->columns(); j++) {
             //ret->Set(i, j, Sigmoid(ret->Get(i, j)));
-            ret->At(i, j) = sigmoidDeriv(ret->At(i, j));
+            ret->at(i, j) = sigmoidDeriv(ret->at(i, j));
         }
     }
 
@@ -91,8 +91,8 @@ Matrix FlattenLayer::output(const Matrix& input)
     for(int i = 0; i < m_height; i++) {
         for(int j = 0; j < m_width; j++) {
             //Z->Set(i*m_width+j, 1, input.Get(i, j));
-            Z.At(i*m_width+j, 0) = input.At(i, j);
-            m_lin_output.At(i*m_width+j, 0) = input.At(i, j);
+            Z.at(i*m_width+j, 0) = input.at(i, j);
+            m_lin_output.at(i*m_width+j, 0) = input.at(i, j);
         }
     }
 
@@ -166,8 +166,8 @@ Matrix DenseLayer::output(const Matrix &input)
             sum += m_weights.Get(j,i) * input.Get(j, 0);
         }
         //ret->Set(i, 1, sum);
-        z.At(i, 0) = sigmoid(sum);
-        m_lin_output.At(i, 0) = sum;
+        z.at(i, 0) = sigmoid(sum);
+        m_lin_output.at(i, 0) = sum;
     }
 
     if (m_next_layer != nullptr) {
@@ -186,11 +186,11 @@ Matrix DenseLayer::computeSensitivity(const Matrix& next_weights, const Matrix& 
 
     for (int i = 0; i < m_nodes; i++) {
         sum = 0.0f;
-        for (int j = 0; j < next_sensitivity.Rows(); j ++) {
+        for (int j = 0; j < next_sensitivity.rows(); j ++) {
             // i,j bo bieżemy i-tą wagę z każdego node'a następnej warstwy
-            sum += next_weights.At(i,j) * next_sensitivity.At(j, 0);
+            sum += next_weights.at(i,j) * next_sensitivity.at(j, 0);
         }
-        m_sensitivity.At(i, 0) = sigmoidDeriv(m_lin_output.At(i, 0)) * sum;
+        m_sensitivity.at(i, 0) = sigmoidDeriv(m_lin_output.at(i, 0)) * sum;
     }
     //cout << endl << "sensitivity: " << endl;
     //m_sensitivity.print();
@@ -220,7 +220,7 @@ void DenseLayer::updateWeights(Matrix in, float learning_rate)
     {
         for (int j = 0; j < m_inputs; j++)
         {
-            m_weights.At(j, i) -= learning_rate * sigmoid(in.At(j,0))*m_sensitivity.At(i, 0);
+            m_weights.at(j, i) -= learning_rate * sigmoid(in.at(j,0))*m_sensitivity.at(i, 0);
         }
     }
 }
@@ -268,8 +268,8 @@ Matrix OutputLayer::output(const Matrix &input)
             sum += m_weights.Get(j,i) * input.Get(j, 0);
         }
         //ret->Set(i, 1, sum);
-        m_lin_output.At(i, 0) = sum;
-        z.At(i, 0) = sigmoid(sum);
+        m_lin_output.at(i, 0) = sum;
+        z.at(i, 0) = sigmoid(sum);
     }
 
     if (m_next_layer != nullptr) {
@@ -294,7 +294,7 @@ void OutputLayer::updateWeights(Matrix in, float learning_rate)
     {
         for (int j = 0; j < m_inputs; j++)
         {
-            m_weights.At(j, i) -= sigmoid(in.At(j,0))*m_sensitivity.At(i, 0);
+            m_weights.at(j, i) -= sigmoid(in.at(j,0))*m_sensitivity.at(i, 0);
         }
     }
 }

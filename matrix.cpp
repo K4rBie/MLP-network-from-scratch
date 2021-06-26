@@ -92,7 +92,7 @@ Matrix::Matrix(const Matrix &a)
     //assign new values
     for(int i = 0; i < m_rows; i++) {
         for(int j = 0; j < m_cols; j++) {
-            m_array[i][j] = a.At(i, j);
+            m_array[i][j] = a.at(i, j);
         }
     }
 }
@@ -113,12 +113,12 @@ void Matrix::FillRandom(int min, int max) {
     }
 }
 
-int Matrix::Rows() const
+int Matrix::rows() const
 {
     return m_rows;
 }
 
-int Matrix::Columns() const
+int Matrix::columns() const
 {
     return m_cols;
 }
@@ -136,10 +136,10 @@ void Matrix::print() const
 Matrix &Matrix::operator*(const Matrix &a)
 {
     int i, j, k;
-    int r1 = this->Rows();
-    int c1 = this->Columns();
-    int r2 = a.Rows();
-    int c2 = a.Columns();
+    int r1 = this->rows();
+    int c1 = this->columns();
+    int r2 = a.rows();
+    int c2 = a.columns();
 
     Matrix* ret = new Matrix(r1, c2);
     ret->Fill(0);
@@ -169,7 +169,7 @@ Matrix &Matrix::operator+(const Matrix &a)
 
     for(int i = 0; i < ret->m_rows; i++) {
         for(int j = 0; j < ret->m_cols; j++) {
-            ret->m_array[i][j] = this->At(i, j) + a.At(i, j);
+            ret->m_array[i][j] = this->at(i, j) + a.at(i, j);
         }
     }
 
@@ -182,7 +182,7 @@ Matrix &Matrix::operator-(const Matrix &a) const
 
     for(int i = 0; i < ret->m_rows; i++) {
         for(int j = 0; j < ret->m_cols; j++) {
-            ret->m_array[i][j] = this->At(i, j) - a.At(i, j);
+            ret->m_array[i][j] = this->at(i, j) - a.at(i, j);
         }
     }
 
@@ -213,7 +213,7 @@ Matrix& Matrix::operator=( Matrix const &a)
     //assign new values
     for(int i = 0; i < m_rows; i++) {
         for(int j = 0; j < m_cols; j++) {
-            m_array[i][j] = a.At(i, j);
+            m_array[i][j] = a.at(i, j);
         }
     }
 
@@ -231,7 +231,7 @@ void Matrix::Set(int row, int col, float value)
     m_array[row][col] = value;
 }
 
-float& Matrix::At(int row, int col) const
+float& Matrix::at(int row, int col) const
 {
     float** row_ptr = m_array + row;
     float* elem = *row_ptr + col;
@@ -244,8 +244,8 @@ Matrix& Matrix::MultiplyElementwise(const Matrix &a, const Matrix &b)
 
     auto* ret = new Matrix(a.m_rows, a.m_cols);
 
-    for(int i = 0; i < ret->Rows(); i++) {
-        for(int j = 0; j < ret->Columns(); j++) {
+    for(int i = 0; i < ret->rows(); i++) {
+        for(int j = 0; j < ret->columns(); j++) {
             ret->m_array[i][j] = a.Get(i, j) * b.Get(i, j);
         }
     }

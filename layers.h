@@ -1,4 +1,4 @@
-    #ifndef LAYERS_H
+#ifndef LAYERS_H
 #define LAYERS_H
 
 #include <vector>

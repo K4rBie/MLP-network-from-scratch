@@ -30,29 +30,29 @@ float Model::trainingEpoch(const path& training_data_path, float learning_rate)
 
         string ext = img_path.extension();
         string jpg = ".jpg";
+        string jpeg = ".jpeg";
 
-        if (ext==jpg && classesFileExists(img_path))
+        if ((ext==jpg || ext==jpg) && classesFileExists(img_path))
         {
             CImg<float> img(img_path.c_str());
+            img.resize(m_input_width, m_input_height,1,1,3);
 
-            // otwórz zdjęcie jeśli ma 100 x 100
-            if(img.height() == m_input_height && img.width() == m_input_width) {
-                image = Matrix(img);
-                labels = trainingLabels(img_path);
+            image = Matrix(img);
+            labels = fetchLabels(img_path);
 
-                //cout << "labels: " << endl;
-                //labels.print();
+            //cout << "labels: " << endl;
+            //labels.print();
 
-                Matrix inference = infer(image);
-                backPropagation(labels, learning_rate);
+            Matrix inference = infer(image);
+            backPropagation(labels, learning_rate);
 
-                loss += calculateLoss(inference, labels);
-                images++;
-            }
+            loss += calculateLoss(inference, labels);
+            images++;
+
         }     
     }
 
-    cout << "trained on " << images << " images." << endl;
+    cout << "(obrazy: " << images << ") ";
     float average_loss = loss/(float)images;
     return average_loss;
 }
@@ -66,14 +66,53 @@ void Model::train(const path& training_data_path, int epochs, float learning_rat
         previous_loss = actual_loss;
         actual_loss = trainingEpoch(training_data_path, learning_rate);
 
-        cout << "actual loss after " << i+1 << " epochs: " << actual_loss << endl;
+        cout << "aktualna strata po " << i+1 << " epokach: " << actual_loss << endl;
 
         //if (actual_loss > previous_loss) break;
     }
 }
 
+void Model::evaluate(const path &eval_data_path)
+{
+    Matrix image;
+    Matrix labels;
+    float loss = 0.f;
+    int images = 0;
 
-bool Model::classesFileExists(const std::filesystem::__cxx11::path& image_path)
+    for (const auto& img_file : directory_iterator(eval_data_path))
+    {
+        path img_path = img_file.path();
+
+        string ext = img_path.extension();
+        string jpg = ".jpg";
+        string jpeg = ".jpeg";
+
+        if ((ext==jpg || ext==jpg) && classesFileExists(img_path))
+        {
+            CImg<float> img(img_path.c_str());
+            img.resize(m_input_width, m_input_height,1,1,3);
+
+
+            image = Matrix(img);
+            labels = fetchLabels(img_path);
+
+            //cout << "labels: " << endl;
+            //labels.print();
+
+            Matrix inference = infer(image);
+
+            loss += calculateLoss(inference, labels);
+            images++;
+
+        }
+    }
+    cout << "ewaluacja na " << images << " obrazach." << endl;
+    float average_loss = loss/(float)images;
+    cout << "średnia strata to: " << average_loss << endl;
+}
+
+
+bool Model::classesFileExists(const path& image_path)
 {
     string config_str = image_path.parent_path().c_str() + string("/") + image_path.stem().c_str() + string(".txt");
     path config_path(config_str);
@@ -82,12 +121,12 @@ bool Model::classesFileExists(const std::filesystem::__cxx11::path& image_path)
         //cout << "classes path: " << config_str << " exists." << endl;
         return true;
     } else {
-        cout << "classes path: " << config_str << " does not exist." << endl;
+        cout << "brak etykiet dla obrazu: " << image_path << endl;
         return false;
     }
 }
 
-Matrix Model::trainingLabels(const std::filesystem::__cxx11::path &image_path)
+Matrix Model::fetchLabels(const path &image_path)
 {
     string config_str = image_path.parent_path().c_str() + string("/") + image_path.stem().c_str() + string(".txt");
     std::fstream config_file;
@@ -97,7 +136,7 @@ Matrix Model::trainingLabels(const std::filesystem::__cxx11::path &image_path)
     if (config_file.is_open()) {
         for (int i = 0; i < m_classes; i++){
             if(!config_file.eof()){
-                config_file >> classes.At(i, 0);
+                config_file >> classes.at(i, 0);
             } else {
                 throw;
             }
@@ -119,13 +158,22 @@ float Model::calculateLoss(const Matrix& inference, const Matrix& training_label
 {
     float loss = 0;
     float s, z;
+    float epsilon = 1e-7f;
 
     // tu może chodzić o liniowy output (tak rozumiem obliczenia z prezentacji),
     //ale nie jestem pewien bo błąd powinniśmy liczyć od ostatecznego wyniku
     //??
-    for (int i = 0; i < inference.Rows(); i++) {
-        s = training_labels.At(i, 0);
-        z = inference.At(i, 0);
+    for (int i = 0; i < inference.rows(); i++) {
+        s = training_labels.at(i, 0);
+        z = inference.at(i, 0);
+
+        if (s < epsilon) s = epsilon;
+        else
+        if (1.f - s < epsilon) s = 1.f - epsilon;
+
+        if (z < epsilon) z = epsilon;
+        else
+        if (1.f - z < epsilon) z = 1.f - epsilon;
 
         loss += -( s*log(z) + (1.f-s) * log(1.f-z));
     }

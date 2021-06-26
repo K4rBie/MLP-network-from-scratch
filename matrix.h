@@ -28,10 +28,10 @@ public:
     void Fill(int fill);
     void FillRandom(int min, int max);
     void Set(int row, int col, float value);
-    float &At(int row, int col) const;
+    float &at(int row, int col) const;
 
-    int Rows() const;
-    int Columns() const;
+    int rows() const;
+    int columns() const;
 
     void print()const ;
 
